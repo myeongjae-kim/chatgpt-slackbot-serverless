@@ -4,6 +4,7 @@ useDotenv: true
 
 provider:
   name: aws
+  region: ap-northeast-2
   runtime: nodejs18.x
   timeout: 30
   memorySize: 512
