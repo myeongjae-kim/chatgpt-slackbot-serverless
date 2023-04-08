@@ -132,7 +132,7 @@ app.message(async ({ event, message, say }) => {
         }
 
         const conversations = JSON.stringify(replies
-          .slice(-100) // 최대 100개까지의 최근 대화를 기반으로 답변한다.
+          .slice(-20) // 최대 20개까지의 최근 대화를 기반으로 답변한다.
           .map(it => {
               if (it.bot_id) {
                   return {
