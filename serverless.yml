@@ -28,3 +28,4 @@ functions:
       - http:
           path: slack/events
           method: post
+    timeout: 180
