@@ -2,6 +2,7 @@ import { APIGatewayProxyHandler } from 'aws-lambda';
 import Slack from '@slack/bolt'
 import { ChatGPTAPI } from "chatgpt";
 import debounce from 'debounce-promise';
+import * as repl from "repl";
 
 const MESSAGE_PREFIX = ":robot_face: "
 const addMessagePrefix = (text: string) => MESSAGE_PREFIX + text;
@@ -125,8 +126,32 @@ app.message(async ({ event, message, say }) => {
     // console.log("previous", previous)
     // console.log("==================================================================")
 
+    const previousConversations = (() => {
+        if (!replies || replies.length === 0) {
+            return '';
+        }
+
+        const conversations = JSON.stringify(replies
+          .slice(-100) // 최대 100개까지의 최근 대화를 기반으로 답변한다.
+          .map(it => {
+              if (it.bot_id) {
+                  return {
+                      from: 'chatgpt',
+                      text: it.text,
+                  }
+              } else {
+                  return {
+                      from: it.user,
+                      text: it.text,
+                  }
+              }
+          }), null, 2);
+
+        return "please answer based on below previous conversations: " + conversations + "\n\n now here is the new question:\n\n"
+    })();
+
     try {
-        const answer = await api.sendMessage(message.text, {
+        const answer = await api.sendMessage(previousConversations + message.text, {
             parentMessageId: previous.parentMessageId,
             conversationId: previous.conversationId,
             onProgress: async (answer) => {
