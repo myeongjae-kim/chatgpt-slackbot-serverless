@@ -11,6 +11,7 @@ provider:
     SLACK_SIGNING_SECRET: ${env:SLACK_SIGNING_SECRET}
     SLACK_BOT_TOKEN: ${env:SLACK_BOT_TOKEN}
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    CHANNEL_IDS_TO_REPLY_EVERY_MESSAGE: ${env:CHANNEL_IDS_TO_REPLY_EVERY_MESSAGE}
 custom:
   serverlessPluginTypescript:
     tsConfigFileLocation: "./tsconfig.json"
