@@ -5,6 +5,7 @@ import debounce from 'debounce-promise';
 import * as repl from "repl";
 
 const MESSAGE_PREFIX = ":robot_face: "
+const DONE_POSTFIX = ":done:"
 const addMessagePrefix = (text: string) => MESSAGE_PREFIX + text;
 
 const channelsToReplyAll = new Set<string>((process.env.CHANNEL_IDS_TO_REPLY_EVERY_MESSAGE || '').split(','));
@@ -62,7 +63,7 @@ app.event("app_mention", async ({ event, say }) => {
     await updateMessage({
         channel: ms.channel!,
         ts: ms.ts!,
-        text: addMessagePrefix(`${answer.text} :done:`),
+        text: addMessagePrefix(`${answer.text} ${DONE_POSTFIX}`),
     });
 });
 
@@ -88,14 +89,6 @@ app.message(async ({ event, message, say }) => {
 
     console.log('user channel', message.channel);
 
-    const { messages } = await app.client.conversations.history({
-        channel: message.channel,
-        latest: message.ts,
-        inclusive: true,
-        include_all_metadata: true,
-        limit: 20
-    });
-
     const { messages: replies } = await app.client.conversations.replies({
         channel: message.channel,
         ts: message.thread_ts || message.ts,
@@ -108,7 +101,7 @@ app.message(async ({ event, message, say }) => {
         conversationId: undefined
     };
 
-    const thread_ts = (messages || []).filter(it => !it.text?.startsWith(MESSAGE_PREFIX)).map(it => it.thread_ts || it.ts)[0];
+    const thread_ts = message.thread_ts || message.ts;
     const ms = await say({
         channel: message.channel,
         text: addMessagePrefix(':thinking_face:'),
@@ -136,18 +129,23 @@ app.message(async ({ event, message, say }) => {
           .map(it => {
               if (it.bot_id) {
                   return {
-                      from: 'chatgpt',
-                      text: it.text,
+                      role: 'assistant',
+                      content: it.text,
                   }
               } else {
                   return {
-                      from: it.user,
-                      text: it.text,
+                      role: 'user',
+                      content: it.text,
                   }
               }
           }), null, 2);
 
-        return "please answer based on below previous conversations: " + conversations + "\n\n now here is the new question:\n\n"
+         const conversationToSend = conversations
+          .replaceAll(MESSAGE_PREFIX, "")
+          .replaceAll(DONE_POSTFIX, "")
+
+        // ChatGPT API는 토큰을 최대 4097개까지 받을 수 있다. 한글 1920자 정도면 약 토큰 4천개 정도 된다.
+        return conversationToSend.substring(conversationToSend.length - 1920);
     })();
 
     try {
@@ -169,7 +167,7 @@ app.message(async ({ event, message, say }) => {
         await updateMessage({
             channel: ms.channel,
             ts: ms.ts,
-            text: addMessagePrefix(`${answer.text} :done:`),
+            text: addMessagePrefix(`${answer.text} ${DONE_POSTFIX}`),
             payload: answer,
         });
     } catch(error) {
