@@ -4,11 +4,12 @@ import { ChatGPTAPI } from "chatgpt";
 import debounce from 'debounce-promise';
 import * as repl from "repl";
 
-const MESSAGE_PREFIX = ":robot_face: "
+const BOT_MESSAGE_PREFIX = ":robot_face: "
 const DONE_POSTFIX = ":done:"
-const addMessagePrefix = (text: string) => MESSAGE_PREFIX + text;
+const addMessagePrefix = (text: string) => BOT_MESSAGE_PREFIX + text;
 
 const channelsToReplyAll = new Set<string>((process.env.CHANNEL_IDS_TO_REPLY_EVERY_MESSAGE || '').split(','));
+const prefixesToIgnore = new Set<string>(['x','X','ㅌ'])
 
 const api = new ChatGPTAPI({
     apiKey: process.env.OPENAI_API_KEY!,
@@ -82,7 +83,8 @@ app.message(async ({ event, message, say }) => {
     if(
       !channelsToReplyAll.has(message.channel)
         || !(isUserMessage && message.text && message.text !== "reset")
-        || message.text.startsWith(MESSAGE_PREFIX)
+        || message.text.startsWith(BOT_MESSAGE_PREFIX)
+        || prefixesToIgnore.has(message.text[0])
     ){
         return;
     }
@@ -128,6 +130,8 @@ app.message(async ({ event, message, say }) => {
         }
 
         const conversations = JSON.stringify(replies
+          .filter(it => it.text && !prefixesToIgnore.has(it.text[0])) // prefixesToIgnore의 문자로 시작하는 문자열은 제거한다.
+          .filter(it => it.bot_id || (it.text && !it.text.startsWith(BOT_MESSAGE_PREFIX))) // 사람이 기계 메시지를 흉내낸 것도 제외한다.
           .slice(-20) // 최대 20개까지의 최근 대화를 기반으로 답변한다.
           .map(it => {
               if (it.bot_id) {
@@ -144,7 +148,7 @@ app.message(async ({ event, message, say }) => {
           }), null, 2);
 
          const conversationToSend = conversations
-          .replaceAll(MESSAGE_PREFIX, "")
+          .replaceAll(BOT_MESSAGE_PREFIX, "")
           .replaceAll(DONE_POSTFIX, "")
 
         // ChatGPT API는 토큰을 최대 4097개까지 받을 수 있다. 한글 1920자 정도면 약 토큰 4천개 정도 된다.
