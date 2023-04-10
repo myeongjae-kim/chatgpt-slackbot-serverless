@@ -123,6 +123,9 @@ app.message(async ({ event, message, say }) => {
         if (!replies || replies.length === 0) {
             return '';
         }
+        if (replies.length === 1) {
+            return replies[0].text; // 첫 번째 질문부터 json으로 넣어버리면 json과 관련된 답변을 해버리므로 일반 텍스트로 넣는다.
+        }
 
         const conversations = JSON.stringify(replies
           .slice(-20) // 최대 20개까지의 최근 대화를 기반으로 답변한다.
